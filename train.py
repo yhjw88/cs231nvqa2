@@ -70,15 +70,13 @@ def evaluate(model, dataloader):
     score = 0
     upper_bound = 0
     num_data = 0
-    for v, b, q, a in iter(dataloader):
-        v = Variable(v, volatile=True).cuda()
-        b = Variable(b, volatile=True).cuda()
-        q = Variable(q, volatile=True).cuda()
-        pred = model(v, b, q, None)
-        batch_score = compute_score_with_logits(pred, a.cuda()).sum()
-        score += batch_score
-        upper_bound += (a.max(1)[0]).sum()
-        num_data += pred.size(0)
+    with torch.no_grad():
+        for v, b, q, a in iter(dataloader):
+            pred = model(v.cuda(), b.cuda(), q.cuda(), None)
+            batch_score = compute_score_with_logits(pred, a.cuda()).sum()
+            score += batch_score
+            upper_bound += (a.max(1)[0]).sum()
+            num_data += pred.size(0)
 
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
