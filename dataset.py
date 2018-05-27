@@ -101,7 +101,7 @@ def _load_dataset(dataroot, name, img_id2val):
 class VQAFeatureDataset(Dataset):
     def __init__(self, name, dictionary, dataroot='data'):
         super(VQAFeatureDataset, self).__init__()
-        assert name in ['train', 'val']
+        assert name in ['train', 'val', 'valSample']
 
         ans2label_path = os.path.join(dataroot, 'cache', 'trainval_ans2label.pkl')
         label2ans_path = os.path.join(dataroot, 'cache', 'trainval_label2ans.pkl')
