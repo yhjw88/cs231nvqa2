@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--seed', type=int, default=1111, help='random seed')
     parser.add_argument('--eval_only', type=bool, default=False)
+    parser.add_argument('--evalset_name',type=str,default='val')
     args = parser.parse_args()
     return args
 
@@ -35,7 +36,7 @@ if __name__ == '__main__':
         print "Fetching train data"
         train_dset = VQAFeatureDataset('train', dictionary)
     print "Fetching eval data"
-    eval_dset = VQAFeatureDataset('val', dictionary)
+    eval_dset = VQAFeatureDataset(args.evalset_name, dictionary)
 
     # Fetch model.
     constructor = 'build_%s' % args.model
