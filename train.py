@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import utils
 from torch.autograd import Variable
-
+import cPickle
 
 def instance_bce_with_logits(logits, labels):
     assert logits.dim() == 2
@@ -70,6 +70,7 @@ def evaluate(model, dataloader):
     score = 0
     upper_bound = 0
     num_data = 0
+    prediction = []
     with torch.no_grad():
         for v, b, q, a in iter(dataloader):
             pred = model(v.cuda(), b.cuda(), q.cuda(), None)
@@ -77,7 +78,8 @@ def evaluate(model, dataloader):
             score += batch_score
             upper_bound += (a.max(1)[0]).sum()
             num_data += pred.size(0)
-
+            prediction.append(pred)
+    cPickle.dump(prediction,open("predictions.pkl"))
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
     return score, upper_bound
