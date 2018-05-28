@@ -79,7 +79,7 @@ def evaluate(model, dataloader):
             upper_bound += (a.max(1)[0]).sum()
             num_data += pred.size(0)
             prediction.append(pred)
-    cPickle.dump(prediction,open("predictions.pkl"))
+    cPickle.dump(prediction,open("predictions.pkl","wb"))
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
     return score, upper_bound
