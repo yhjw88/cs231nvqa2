@@ -99,7 +99,7 @@ def _load_dataset(dataroot, name, img_id2val):
 
 
 class VQAFeatureDataset(Dataset):
-    def __init__(self, name, dictionary, dataroot='data'):
+    def __init__(self, name, evalset_name, dictionary, dataroot='data'):
         super(VQAFeatureDataset, self).__init__()
         assert name in ['train', 'val', 'adv','valSample']
 
@@ -119,7 +119,7 @@ class VQAFeatureDataset(Dataset):
             self.features = np.array(hf.get('image_features'))
             self.spatials = np.array(hf.get('spatial_features'))
 
-        self.entries = _load_dataset(dataroot, name, self.img_id2idx)
+        self.entries = _load_dataset(dataroot, evalset_name, self.img_id2idx)
 
         self.tokenize()
         self.tensorize()

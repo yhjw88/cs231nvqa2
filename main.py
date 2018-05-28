@@ -36,7 +36,7 @@ if __name__ == '__main__':
         print "Fetching train data"
         train_dset = VQAFeatureDataset('train', dictionary)
     print "Fetching eval data"
-    eval_dset = VQAFeatureDataset(args.evalset_name, dictionary)
+    eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
 
     # Fetch model.
     constructor = 'build_%s' % args.model
