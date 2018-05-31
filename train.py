@@ -88,6 +88,10 @@ def evaluate(model, dataloader):
 def generate_examples(model, adv_dset):
     for i in range(len(adv_dset)):
         v,b,q,a = adv_dset[i]
+        v.unsqueeze_(0)
+        b.unsqueeze_(0)
+        q.unsqueeze_(0)
+        a.unsqueeze_(0)
         pred = model(v.cuda(), b.cuda(), q.cuda(), None)
         print(pred)
 
