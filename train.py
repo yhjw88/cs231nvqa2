@@ -79,7 +79,15 @@ def evaluate(model, dataloader):
             upper_bound += (a.max(1)[0]).sum()
             num_data += pred.size(0)
             prediction.append(pred)
+            
     cPickle.dump(prediction,open("predictions.pkl","wb"))
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
     return score, upper_bound
+
+def generate_examples(model, adv_dset):
+    for i in range(len(adv_dset)):
+        v,b,q,a = adv_dset[i]
+        pred = model(v.cuda(), b.cuda(), q.cuda(), None)
+        print(pred)
+

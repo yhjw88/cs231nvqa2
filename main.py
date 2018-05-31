@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--seed', type=int, default=1111, help='random seed')
     parser.add_argument('--eval_only', type=bool, default=False)
+    parser.add_argument('--gen_adv', type=bool, default=False)
     parser.add_argument('--evalset_name',type=str,default='val')
     args = parser.parse_args()
     return args
@@ -32,18 +33,25 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
 
     dictionary = Dictionary.load_from_file('data/dictionary.pkl')
-    if not args.eval_only:
-        print "Fetching train data"
-        train_dset = VQAFeatureDataset('train', dictionary)
-    print "Fetching eval data"
-    eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
+    if args.gen_adv:
+        print "Generating adversarial examples"
+        adv_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
+    else:
+        if not args.eval_only:
+            print "Fetching train data"
+            train_dset = VQAFeatureDataset('train', dictionary)
+        print "Fetching eval data"
+        eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
 
     # Fetch model.
     constructor = 'build_%s' % args.model
-    if not args.eval_only:
-        model = getattr(base_model, constructor)(train_dset, args.num_hid).cuda()
+    if args.gen_adv:
+        model = getattr(base_model, constructor)(adv_dset, args.num_hid).cuda()
     else:
-        model = getattr(base_model, constructor)(eval_dset, args.num_hid).cuda()
+        if not args.eval_only:
+            model = getattr(base_model, constructor)(train_dset, args.num_hid).cuda()
+        else:
+            model = getattr(base_model, constructor)(eval_dset, args.num_hid).cuda()
     model.w_emb.init_embedding('data/glove6b_init_300d.npy')
     model = nn.DataParallel(model).cuda()
     if args.load_path:
@@ -52,12 +60,16 @@ if __name__ == '__main__':
         model.load_state_dict(torch.load(load_path))
 
     # Train/eval.
-    eval_loader =  DataLoader(eval_dset, args.batch_size, shuffle=True)
-    if not args.eval_only:
-        train_loader = DataLoader(train_dset, args.batch_size, shuffle=True)
-        train.train(model, train_loader, eval_loader, args.epochs, args.output)
-    else:
-        print "Evaluating..."
+    if args.gen_adv:
         model.train(False)
-        eval_score, bound = train.evaluate(model, eval_loader)
-        print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
+        train.generate_examples(model, adv_dset)
+    else:
+        eval_loader =  DataLoader(eval_dset, args.batch_size, shuffle=True)
+        if not args.eval_only:
+            train_loader = DataLoader(train_dset, args.batch_size, shuffle=True)
+            train.train(model, train_loader, eval_loader, args.epochs, args.output)
+        else:
+            print "Evaluating..."
+            model.train(False)
+            eval_score, bound = train.evaluate(model, eval_loader)
+            print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
