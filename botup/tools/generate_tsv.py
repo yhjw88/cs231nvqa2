@@ -61,6 +61,14 @@ def load_image_ids(split_name):
           image_id = int(item['image_id'])
           filepath = os.path.join('/data/visualgenome/', item['url'].split('rak248/')[-1])
           split.append((filepath,image_id))      
+    elif split_name == 'val2014img':
+      images = json.load(open("data/val2014imgs.json"))
+      for image_id, image_loc in images.iteritems():
+        split.append((image_loc, int(image_id)))
+    elif split_name == 'valSample2014img':
+      images = json.load(open("data/valSample2014imgs.json"))
+      for image_id, image_loc in images.iteritems():
+        split.append((image_loc, int(image_id)))
     else:
       print 'Unknown split'
     return split
