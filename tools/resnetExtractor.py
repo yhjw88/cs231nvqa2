@@ -88,6 +88,8 @@ def extractFeatures(args, inFolder, outFilename, outIdxFilename, split):
     with torch.no_grad():
         for imageIds, images in tqdm(imageLoader):
             imageFs = resnet(images.cuda())
+            # TODO: This is a mistake, as the output is (2048, 7, 7).
+            # I'm leaving this here since regenerating will take forever.
             imageFs = imageFs.view(-1, 49, 2048)
             imageFs = imageFs.cpu().numpy()
 
@@ -109,10 +111,10 @@ if __name__ == "__main__":
 
     extractFeatures(
         args,
-        "data/train2014img",
-        "data/resnet/train49.hdf5",
-        "data/resnet/train49Idx.pkl",
-        "train")
+        "data/val2014img",
+        "data/resnet/val49.hdf5",
+        "data/resnet/val49Idx.pkl",
+        "val")
 
     # resnet = models.resnet152(pretrained=True)
     # for child in list(resnet.children())[:-2]:
