@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--output', type=str, default='saved_models/exp0')
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--seed', type=int, default=1111, help='random seed')
-    parser.add_argument('--mode', type=str, default='normal')
+    parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--evalset_name',type=str,default='val')
     args = parser.parse_args()
     return args
