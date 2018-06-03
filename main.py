@@ -27,7 +27,7 @@ def trainNormal(args):
     # Fetch data.
     dictionary = Dictionary.load_from_file('data/dictionary.pkl')
     print "Fetching train data"
-    train_dset = VQAFeatureDataset('train', dictionary)
+    train_dset = VQAFeatureDataset('train', 'train', dictionary)
     print "Fetching eval data"
     eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
 
