@@ -92,7 +92,7 @@ def extractFeatures(args, inFolder, outFilename, outIdxFilename, split):
             imageFs = imageFs.cpu().numpy()
 
             for imageId, imageF in zip(imageIds, imageFs):
-                indices[imageId] = counter
+                indices[int(imageId.numpy())] = counter
                 outFeatures[counter, :, :] = imageF
                 counter += 1
 
