@@ -36,8 +36,6 @@ class ImageDataset(Dataset):
                 imageId = filename[prefixLength:-4]
                 assert len(imageId) == 12
                 images.append({"imageId": int(imageId), "path": filepath})
-            if len(images) == 100:
-                break
         return images
 
     def getTransform(self, size):
@@ -64,7 +62,7 @@ class ResnetStripped(nn.Module):
 
 def parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=512)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--seed', type=int, default=1111, help='random seed')
     args = parser.parse_args()
     return args
@@ -73,6 +71,7 @@ def extractFeatures(args, inFolder, outFilename, outIdxFilename, split):
     print "Loading data"
     imageDataset = ImageDataset(inFolder, split)
     imageLoader = DataLoader(imageDataset, args.batch_size, shuffle=False)
+    print "Loaded {} images".format(len(imageDataset))
 
     resnet = ResnetStripped()
     resnet = nn.DataParallel(resnet).cuda()
