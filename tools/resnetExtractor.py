@@ -13,12 +13,12 @@ from tqdm import tqdm
 
 class ImageDataset(Dataset):
 
-    def __init__(self, folder):
-        self.images = self.loadImages(folder)
+    def __init__(self, folder, split):
+        self.images = self.loadImages(folder, split)
         self.transform = self.getTransform(448)
 
     def __getitem__(self, index):
-        image = self.imagesIndex[index]
+        image = self.images[index]
         imageF = Image.open(image["path"]).convert("RGB")
         if self.transform is not None:
             imageF = self.transform(imageF)
@@ -27,13 +27,17 @@ class ImageDataset(Dataset):
     def __len__(self):
         return len(self.images)
 
-    def loadImages(self, folder):
+    def loadImages(self, folder, split):
         images = []
         for filename in os.listdir(folder):
             if filename[-4:] == ".jpg":
                 filepath = os.path.join(folder, filename)
-                imageId = int(filename[15:-4])
-                images.append({"imageId": imageId, "path": filepath})
+                prefixLength = len("COCO_"+split+"2014_")
+                imageId = filename[prefixLength:-4]
+                assert len(imageId) == 12
+                images.append({"imageId": int(imageId), "path": filepath})
+            if len(images) == 100:
+                break
         return images
 
     def getTransform(self, size):
@@ -60,15 +64,14 @@ class ResnetStripped(nn.Module):
 
 def parseArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output', type=str, default='???')
     parser.add_argument('--batch_size', type=int, default=512)
     parser.add_argument('--seed', type=int, default=1111, help='random seed')
     args = parser.parse_args()
     return args
 
-def extractFeatures(args, inFolder, outFilename, outIdxFilename):
+def extractFeatures(args, inFolder, outFilename, outIdxFilename, split):
     print "Loading data"
-    imageDataset = ImageDataset(inFolder)
+    imageDataset = ImageDataset(inFolder, split)
     imageLoader = DataLoader(imageDataset, args.batch_size, shuffle=False)
 
     resnet = ResnetStripped()
@@ -87,13 +90,13 @@ def extractFeatures(args, inFolder, outFilename, outIdxFilename):
         for imageIds, images in tqdm(imageLoader):
             imageFs = resnet(images.cuda())
             imageFs = imageFs.view(-1, 49, 2048)
-            imageFs = imageFs.data.numpy()
+            imageFs = imageFs.cpu().numpy()
 
             for imageId, imageF in zip(imageIds, imageFs):
                 indices[imageId] = counter
                 outFeatures[counter, :, :] = imageF
                 counter += 1
-    
+
     print "Dumping indices"
     cPickle.dump(indices, open(outIdxFilename, 'wb'))
     outFile.close()
@@ -105,7 +108,12 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(args.seed)
     torch.backends.cudnn.benchmark = True
 
-    extractFeatures(args)
+    extractFeatures(
+        args,
+        "data/train2014img",
+        "data/resnet/train49.hdf5",
+        "data/resnet/train49Idx.pkl",
+        "train")
 
     # resnet = models.resnet152(pretrained=True)
     # for child in list(resnet.children())[:-2]:
