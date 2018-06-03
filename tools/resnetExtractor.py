@@ -55,10 +55,11 @@ class ResnetStripped(nn.Module):
         super(ResnetStripped, self).__init__()
         resnet = models.resnet152(pretrained=True)
         self.layer = nn.Sequential(*list(resnet.children())[:-2])
+        self.pool  = nn.AvgPool2d(2, stride=2)
 
     def forward(self, x):
         x = self.layer(x)
-        return x
+        return self.pool(x)
 
 def parseArgs():
     parser = argparse.ArgumentParser()
@@ -87,15 +88,15 @@ def extractFeatures(args, inFolder, outFilename, outIdxFilename, split):
 
     with torch.no_grad():
         for imageIds, images in tqdm(imageLoader):
-            imageFs = resnet(images.cuda())
-            # TODO: This is a mistake, as the output is (2048, 7, 7).
-            # I'm leaving this here since regenerating will take forever.
-            imageFs = imageFs.view(-1, 49, 2048)
+            numImages = len(imageIds)
+            imageFs = resnet(images.cuda()) # Output (-1, 2048, 7, 7)
             imageFs = imageFs.cpu().numpy()
+            imageFs = imageFs.transpose([0, 2, 3, 1])
+            imageFs = imageFs.reshape((numImages, 49, 2048))
 
-            for imageId, imageF in zip(imageIds, imageFs):
+            outFeatures[counter:counter+numImages, :, :] = imageFs
+            for imageId in imageIds:
                 indices[int(imageId.numpy())] = counter
-                outFeatures[counter, :, :] = imageF
                 counter += 1
 
     print "Dumping indices"
@@ -111,13 +112,13 @@ if __name__ == "__main__":
 
     extractFeatures(
         args,
-        "data/val2014img",
-        "data/resnet/val49.hdf5",
-        "data/resnet/val49Idx.pkl",
-        "val")
+        "data/train2014img",
+        "data/resnet/train49.hdf5",
+        "data/resnet/train49Idx.pkl",
+        "train")
 
     # resnet = models.resnet152(pretrained=True)
-    # for child in list(resnet.children())[:-2]:
+    # for child in resnet.children():
     #     print child
     # print resnet.layer4[-1].out_features
     # for name, child in resnet.named_children():

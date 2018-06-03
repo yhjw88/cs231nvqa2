@@ -13,11 +13,9 @@ def poolFeatures(inFilename, outFilename):
 
         pool = torch.nn.AvgPool2d(3, stride=2)
         for i, inFeature in enumerate(inFeatures):
-            # We reshaped (2048, 7, 7) to (49, 2048) by accident.
-            # Thus, we must correct it here.
-            inFeature = inFeature.reshape((2048, 7, 7))
+            inFeature = inFeature.transpose([1, 0]).reshape((2048, 7, 7))
             outFeature = pool(torch.from_numpy(inFeature))
-            outFeatures[i, :, :] = outFeature.numpy().transpose([1, 2, 0]).reshape((9, 2048))
+            outFeatures[i, :, :] = outFeature.numpy().reshape((2048, 9)).transpose([1, 0])
 
             if (i+1)%500 == 0:
                 print "Processed {}".format(i+1)
