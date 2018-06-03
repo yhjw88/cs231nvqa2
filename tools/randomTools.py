@@ -1,3 +1,4 @@
+import cPickle
 import json
 import os
 
@@ -22,8 +23,8 @@ def examineQuestions(filename):
 
 if __name__ == "__main__":
     # filename = "data/v2_OpenEnded_mscoco_val2014_questions.json"
-    filename = "data/v2_OpenEnded_mscoco_valSample2014_questions.json"
-    examineQuestions(filename)
+    # filename = "data/v2_OpenEnded_mscoco_valSample2014_questions.json"
+    # examineQuestions(filename)
 
     # originJson = json.load(open("data/v2_mscoco_val2014_annotations.json"))
     # allQs = originJson["annotations"]
@@ -42,3 +43,10 @@ if __name__ == "__main__":
     # originJson["annotations"] = remainingQs
     # with open("data/v2_mscoco_valSample2014_annotations.json", 'w') as outFile:
     #     json.dump(originJson, outFile)
+
+    filename = "data/resnet/train49Idx.pkl"
+    a = cPickle.load(open(filename))
+    b = {}
+    for key, value in a.iteritems():
+        b[int(key.numpy())] = value
+    cPickle.dump(b, open("data/resnet/train49Idx2.pkl", "wb"))
