@@ -29,7 +29,7 @@ def trainNormal(args):
     print "Fetching train data"
     train_dset = VQAFeatureDataset('train', 'train', dictionary)
     print "Fetching eval data"
-    eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
+    eval_dset = VQAFeatureDataset('valSample', args.evalset_name, dictionary)
 
     # Fetch model.
     constructor = 'build_%s' % args.model
