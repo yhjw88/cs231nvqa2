@@ -4,8 +4,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from dataset import Dictionary, VQAFeatureDataset
 import base_model
+from dataset import Dictionary, VQAFeatureDataset
+import imageModel
 import train
 
 
@@ -69,6 +70,24 @@ def evalNormal(args):
     eval_score, bound = train.evaluate(model, eval_loader)
     print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
 
+def evalFromImages(args):
+    # Fetch data.
+    dictionary = Dictionary.load_from_file('data/dictionary.pkl')
+    print "Fetching eval data"
+    eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
+
+    # Fetch model.
+    model = imageModel.getCombinedModel(args)
+    model = nn.DataParallel(model).cuda()
+
+    # Evaluate
+    imageLoader = imageModel.ImageLoader("data/val2014img", "val")
+    eval_loader =  DataLoader(eval_dset, args.batch_size, shuffle=True, imageloader=imageLoader)
+    print "Evaluating..."
+    model.train(False)
+    eval_score, bound = train.evaluate(model, eval_loader)
+    print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -80,5 +99,7 @@ if __name__ == '__main__':
         trainNormal(args)
     elif args.mode == "eval":
         evalNormal(args)
+    elif args.mode == "evalFromImage":
+        evalFromImages(args)
     else:
         print "Mode not supported: {}".format(args.mode)

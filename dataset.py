@@ -93,13 +93,16 @@ def _load_dataset(dataroot, name, img_id2val):
         utils.assert_eq(question['question_id'], answer['question_id'])
         utils.assert_eq(question['image_id'], answer['image_id'])
         img_id = question['image_id']
-        entries.append(_create_entry(img_id2val[img_id], question, answer))
+        if img_id2val is not None:
+            entries.append(_create_entry(img_id2val[img_id], question, answer))
+        else:
+            entries.append(_create_entry(img_id, question, answer))
 
     return entries
 
 
 class VQAFeatureDataset(Dataset):
-    def __init__(self, name, evalset_name, dictionary, dataroot='data'):
+    def __init__(self, name, evalset_name, dictionary, dataroot='data', imageLoader=None):
         super(VQAFeatureDataset, self).__init__()
         assert name in ['train', 'val', 'adv','valSample']
 
@@ -119,20 +122,26 @@ class VQAFeatureDataset(Dataset):
         #    self.features = np.asarray(hf.get('image_features'))
         #    self.spatials = np.asarray(hf.get('spatial_features'))
 
-        self.img_id2idx = cPickle.load(
-            open(os.path.join(dataroot, 'resnet/%s49Idx.pkl' % name)))
-        print('loading features from h5 file')
-        h5_path = os.path.join(dataroot, 'resnet/%s49.hdf5' % name)
-        with h5py.File(h5_path, 'r') as hf:
-            self.features = np.asarray(hf.get('image_features'))
-            self.spatials = np.zeros(len(self.features))
+        self.imageLoader = imageLoader
+        if self.imageLoader is None:
+            self.img_id2idx = cPickle.load(
+                open(os.path.join(dataroot, 'resnet/%s49Idx.pkl' % name)))
+            print('loading features from h5 file')
+            h5_path = os.path.join(dataroot, 'resnet/%s49.hdf5' % name)
+            with h5py.File(h5_path, 'r') as hf:
+                self.features = np.asarray(hf.get('image_features'))
+                self.spatials = np.zeros(len(self.features))
+            self.v_dim = self.features.shape[2]
+        else:
+            self.img_id2idx = None
+            self.features = None
+            self.spatials = None
+            self.v_dim = 2048
 
         self.entries = _load_dataset(dataroot, evalset_name, self.img_id2idx)
 
         self.tokenize()
         self.tensorize()
-        self.v_dim = self.features.size(2)
-        # self.s_dim = self.spatials.size(2)
 
     def tokenize(self, max_length=14):
         """Tokenizes the questions.
@@ -151,8 +160,9 @@ class VQAFeatureDataset(Dataset):
             entry['q_token'] = tokens
 
     def tensorize(self):
-        self.features = torch.from_numpy(self.features)
-        self.spatials = torch.from_numpy(self.spatials)
+        if self.imageLoader is None:
+            self.features = torch.from_numpy(self.features)
+            self.spatials = torch.from_numpy(self.spatials)
 
         for entry in self.entries:
             question = torch.from_numpy(np.array(entry['q_token']))
@@ -172,8 +182,13 @@ class VQAFeatureDataset(Dataset):
 
     def __getitem__(self, index):
         entry = self.entries[index]
-        features = self.features[entry['image']]
-        spatials = self.spatials[entry['image']]
+
+        if self.imageLoader is None:
+            features = self.features[entry['image']]
+            spatials = self.spatials[entry['image']]
+        else:
+            features = self.imageLoader.getImage(entry['image'])
+            spatials = 0
 
         question = entry['q_token']
         answer = entry['answer']
