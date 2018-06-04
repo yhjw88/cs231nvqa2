@@ -26,6 +26,7 @@ class CombinedModel(nn.Module):
 
     def forward(self, images, b, q, labels):
         v = self.imageModel(images)
+        v = v.permute([0, 2, 3, 1]).view(-1, 49, 2048)
         logits = self.attentionModel(v, b, q, labels)
         return logits
 
@@ -39,7 +40,7 @@ class ImageLoader():
         if "image" not in imageEntry:
             imageEntry["image"] = Image.open(imageEntry["path"]).convert("RGB")
             imageEntry["image"] = self.transform(imageEntry["image"])
-        return imageEntry
+        return imageEntry["image"]
 
     def loadImages(self, folder, split):
         imageDict = {}
@@ -66,8 +67,9 @@ class ImageLoader():
 
 def getCombinedModel(args, dataset):
     constructor = 'build_%s' % args.model
-    attentionModel = getattr(base_model, constructor)(dataset, args.num_hid)
+    attentionModel = getattr(base_model, constructor)(dataset, args.num_hid).cuda()
     attentionModel.w_emb.init_embedding('data/glove6b_init_300d.npy')
+    attentionModel = nn.DataParallel(attentionModel).cuda()
     if args.load_path:
         load_path = os.path.join(args.load_path, 'model.pth')
         print "Loading model from {}".format(load_path)

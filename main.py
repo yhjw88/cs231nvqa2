@@ -74,15 +74,15 @@ def evalFromImages(args):
     # Fetch data.
     dictionary = Dictionary.load_from_file('data/dictionary.pkl')
     print "Fetching eval data"
-    eval_dset = VQAFeatureDataset('val', args.evalset_name, dictionary)
+    imageLoader = imageModel.ImageLoader("data/val2014img", "val")
+    eval_dset = VQAFeatureDataset('valSample', args.evalset_name, dictionary, imageLoader=imageLoader)
 
     # Fetch model.
-    model = imageModel.getCombinedModel(args)
+    model = imageModel.getCombinedModel(args, eval_dset)
     model = nn.DataParallel(model).cuda()
 
     # Evaluate
-    imageLoader = imageModel.ImageLoader("data/val2014img", "val")
-    eval_loader =  DataLoader(eval_dset, args.batch_size, shuffle=True, imageloader=imageLoader)
+    eval_loader =  DataLoader(eval_dset, args.batch_size, shuffle=True)
     print "Evaluating..."
     model.train(False)
     eval_score, bound = train.evaluate(model, eval_loader)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         trainNormal(args)
     elif args.mode == "eval":
         evalNormal(args)
-    elif args.mode == "evalFromImage":
+    elif args.mode == "evalFromImages":
         evalFromImages(args)
     else:
         print "Mode not supported: {}".format(args.mode)

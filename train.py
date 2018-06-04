@@ -81,13 +81,17 @@ def evaluate(model, dataloader):
     num_data = 0
     prediction = []
     with torch.no_grad():
-        for v, b, q, a in iter(dataloader):
+        for i, (v, b, q, a) in enumerate(dataloader):
             pred = model(v.cuda(), b.cuda(), q.cuda(), None)
             batch_score = compute_score_with_logits(pred, a.cuda()).sum()
             score += batch_score
             upper_bound += (a.max(1)[0]).sum()
             num_data += pred.size(0)
             prediction.append(pred)
+
+            if i % 2 == 0:
+                print 'batch %d, batchScore %.2f' % (i, 100 * batch_score / v.size(0))
+
     # cPickle.dump(prediction,open("predictions.pkl","wb"))
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
