@@ -72,7 +72,7 @@ def _create_entry(img, question, answer):
     return entry
 
 
-def _load_dataset(dataroot, name, img_id2val):
+def _load_dataset(dataroot, name, img_id2val, questionIds):
     """Load entries
 
     img_id2val: dict {img_id -> val} val can be used to retrieve image or features
@@ -92,6 +92,10 @@ def _load_dataset(dataroot, name, img_id2val):
     for question, answer in zip(questions, answers):
         utils.assert_eq(question['question_id'], answer['question_id'])
         utils.assert_eq(question['image_id'], answer['image_id'])
+
+        if questionIds is not None and question['question_id'] not in questionIds:
+            continue
+
         img_id = question['image_id']
         if img_id2val is not None:
             entries.append(_create_entry(img_id2val[img_id], question, answer))
@@ -102,7 +106,7 @@ def _load_dataset(dataroot, name, img_id2val):
 
 
 class VQAFeatureDataset(Dataset):
-    def __init__(self, name, evalset_name, dictionary, dataroot='data', imageLoader=None):
+    def __init__(self, name, evalset_name, dictionary, dataroot='data', imageLoader=None, questionIds=None):
         super(VQAFeatureDataset, self).__init__()
         assert name in ['train', 'val', 'adv','valSample']
 
@@ -138,7 +142,7 @@ class VQAFeatureDataset(Dataset):
             self.spatials = None
             self.v_dim = 2048
 
-        self.entries = _load_dataset(dataroot, evalset_name, self.img_id2idx)
+        self.entries = _load_dataset(dataroot, evalset_name, self.img_id2idx, questionIds)
 
         self.tokenize()
         self.tensorize()
@@ -188,7 +192,7 @@ class VQAFeatureDataset(Dataset):
             spatials = self.spatials[entry['image']]
         else:
             features = self.imageLoader.getImage(entry['image'])
-            spatials = 0
+            spatials = toch.zeros(1)
 
         question = entry['q_token']
         answer = entry['answer']

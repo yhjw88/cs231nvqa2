@@ -1,3 +1,4 @@
+import numpy as np
 import os
 from PIL import Image
 import torch
@@ -64,6 +65,30 @@ class ImageLoader():
             )
         ])
         return transform
+
+class ImageSaver():
+    def __init__(self, folder):
+        self.transform = self.getTransform()
+
+    def getTransform(self, shouldRescale=False):
+        transform = transforms.Compose([
+            transforms.Normalize(mean=[0, 0, 0],
+                                 std=(1 / np.array([0.229, 0.224, 0.225]))),
+            transforms.Normalize(mean=(- np.array([0.485, 0.456, 0.406])),
+                                 std=[1, 1, 1]),
+            transforms.Lambda(self.rescale),
+            transforms.ToPILImage()
+        ])
+        return transform
+
+    def rescale(self, x):
+        low, high = x.min(), x.max()
+        xRescaled = (x - low) / (high - low)
+        return xRescaled
+
+    def saveImage(self, image, filename):
+        image = self.transform(image.clone())
+        image.save(os.path.join(folder, filename), "jpeg")
 
 def getCombinedModel(args, dataset):
     constructor = 'build_%s' % args.model

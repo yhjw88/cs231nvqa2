@@ -88,6 +88,28 @@ def evalFromImages(args):
     eval_score, bound = train.evaluate(model, eval_loader)
     print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
 
+def imageAdv1(args):
+    # Fetch data.
+    dictionary = Dictionary.load_from_file('data/dictionary.pkl')
+    print "Fetching eval data"
+    imageLoader = imageModel.ImageLoader("data/val2014img", "val")
+    dataset = VQAFeatureDataset(
+        'valSample',
+        args.evalset_name,
+        dictionary,
+        imageLoader=imageLoader,
+        questionIds=None) #TODO: Pick some questions.
+
+    # Fetch model.
+    model = imageModel.getCombinedModel(args, eval_dset)
+    model = nn.DataParallel(model).cuda()
+
+    # Train and save.
+    imgOld, img = train.imageAdv1(model, dataset)
+    imageSaver = imageModel.ImageSaver("data/adv1")
+    imageSaver.saveImage(imgOld, "imgOld")
+    imageSaver.saveImage(img, "imgNew")
+
 if __name__ == '__main__':
     args = parse_args()
 
@@ -101,5 +123,7 @@ if __name__ == '__main__':
         evalNormal(args)
     elif args.mode == "evalFromImages":
         evalFromImages(args)
+    elif args.mode == "imageAdv1":
+        imageAdv1(args)
     else:
         print "Mode not supported: {}".format(args.mode)

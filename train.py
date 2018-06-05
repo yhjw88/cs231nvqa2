@@ -96,3 +96,42 @@ def evaluate(model, dataloader):
     score = score / len(dataloader.dataset)
     upper_bound = upper_bound / len(dataloader.dataset)
     return score, upper_bound
+
+# Currently works on only one image.
+def imageAdv1(model, dataset):
+    model.train(False)
+    for param in model.parameters():
+        param.requires_grad = False
+
+    imgOld, b, q, a = dataset[0]
+    img = imgOld.clone()
+    b = b.cuda()
+    q = q.cuda()
+    a = a.cuda()
+    img.requires_grad = True
+    target = 7 #TODO: Pick target?
+    idx2word = dataset.dictionary.idx2word
+    print "Target is {}".format(idx2word[target])
+
+    while True:
+        startTime = time.time()
+
+        img = img.cuda()
+        logits = model(img, b, q, a)
+        predicted = torch.argmax(logits, axis=1)
+        targetScore = logits[0][target]
+        print "predicted: {0}, targetScore: {1:.2f}, wime: {2:.2f} ".format(
+            idx2word[predicted],
+            targetScore,
+            time.time() - startTime)
+        if predicted == target:
+            print "Done"
+            break
+
+        targetScore.backward()
+        with torch.no_grad():
+            norm = torch.sqrt(torch.sum(img.grad**2))
+            img += img.grad / norm
+            img.grad.zero_()
+
+    return imgOld, img
