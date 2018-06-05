@@ -68,6 +68,7 @@ class ImageLoader():
 
 class ImageSaver():
     def __init__(self, folder):
+        self.folder = folder
         self.transform = self.getTransform()
 
     def getTransform(self, shouldRescale=False):
@@ -76,7 +77,9 @@ class ImageSaver():
                                  std=(1 / np.array([0.229, 0.224, 0.225]))),
             transforms.Normalize(mean=(- np.array([0.485, 0.456, 0.406])),
                                  std=[1, 1, 1]),
-            transforms.Lambda(self.rescale),
+            transforms.Lambda(lambda x: self.rescale(x)) \
+                if shouldRescale \
+                else transforms.Lambda(lambda x: x),
             transforms.ToPILImage()
         ])
         return transform
@@ -88,7 +91,7 @@ class ImageSaver():
 
     def saveImage(self, image, filename):
         image = self.transform(image.clone())
-        image.save(os.path.join(folder, filename), "jpeg")
+        image.save(os.path.join(self.folder, filename), "jpeg")
 
 def getCombinedModel(args, dataset):
     constructor = 'build_%s' % args.model

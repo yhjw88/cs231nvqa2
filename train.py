@@ -104,24 +104,34 @@ def imageAdv1(model, dataset):
         param.requires_grad = False
 
     imgOld, b, q, a = dataset[0]
+
+    print ""
+    print "Printing good answers"
+    label2ans = dataset.label2ans
+    for i, score in enumerate(a):
+        if score > 0:
+            print "{}: {}".format(label2ans[i], score)
+    target = 1661 #TODO: Pick target?
+    print "Target is {}".format(label2ans[target])
+    print ""
+
+    imgOld = imgOld.unsqueeze(0)
+    b = b.unsqueeze(0).cuda()
+    q = q.unsqueeze(0).cuda()
+    a = a.unsqueeze(0).cuda()
     img = imgOld.clone()
-    b = b.cuda()
-    q = q.cuda()
-    a = a.cuda()
-    img.requires_grad = True
-    target = 7 #TODO: Pick target?
-    idx2word = dataset.dictionary.idx2word
-    print "Target is {}".format(idx2word[target])
 
     while True:
         startTime = time.time()
 
         img = img.cuda()
+        img.requires_grad = True
         logits = model(img, b, q, a)
-        predicted = torch.argmax(logits, axis=1)
+
+        predicted = torch.argmax(logits)
         targetScore = logits[0][target]
-        print "predicted: {0}, targetScore: {1:.2f}, wime: {2:.2f} ".format(
-            idx2word[predicted],
+        print "predicted: {0}, targetScore: {1:.2f}, time: {2:.2f} ".format(
+            label2ans[predicted],
             targetScore,
             time.time() - startTime)
         if predicted == target:
@@ -134,4 +144,4 @@ def imageAdv1(model, dataset):
             img += img.grad / norm
             img.grad.zero_()
 
-    return imgOld, img
+    return imgOld.squeeze(), img.cpu().squeeze()

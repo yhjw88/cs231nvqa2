@@ -94,14 +94,14 @@ def imageAdv1(args):
     print "Fetching eval data"
     imageLoader = imageModel.ImageLoader("data/val2014img", "val")
     dataset = VQAFeatureDataset(
-        'valSample',
+        'val',
         args.evalset_name,
         dictionary,
         imageLoader=imageLoader,
-        questionIds=None) #TODO: Pick some questions.
+        questionIds= {262148000: 1})
 
     # Fetch model.
-    model = imageModel.getCombinedModel(args, eval_dset)
+    model = imageModel.getCombinedModel(args, dataset)
     model = nn.DataParallel(model).cuda()
 
     # Train and save.

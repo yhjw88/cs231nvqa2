@@ -192,7 +192,7 @@ class VQAFeatureDataset(Dataset):
             spatials = self.spatials[entry['image']]
         else:
             features = self.imageLoader.getImage(entry['image'])
-            spatials = toch.zeros(1)
+            spatials = torch.zeros(1)
 
         question = entry['q_token']
         answer = entry['answer']
