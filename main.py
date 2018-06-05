@@ -1,5 +1,8 @@
 import argparse
+import cPickle
+import numpy as np
 import os
+import time
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -88,27 +91,76 @@ def evalFromImages(args):
     eval_score, bound = train.evaluate(model, eval_loader)
     print "eval score: %.2f (%.2f)" % (100 * eval_score, 100 * bound)
 
-def imageAdv1(args):
+def imageAdv(args, imageAdvF):
     # Fetch data.
+    questionIds = cPickle.load(open("data/goodQuestions.pkl", "rb"))
     dictionary = Dictionary.load_from_file('data/dictionary.pkl')
     print "Fetching eval data"
     imageLoader = imageModel.ImageLoader("data/val2014img", "val")
     dataset = VQAFeatureDataset(
-        'val',
+        'valSample',
         args.evalset_name,
         dictionary,
         imageLoader=imageLoader,
-        questionIds= {262148000: 1})
+        questionIds=questionIds)
 
     # Fetch model.
     model = imageModel.getCombinedModel(args, dataset)
     model = nn.DataParallel(model).cuda()
 
     # Train and save.
-    imgOld, img = train.imageAdv1(model, dataset)
-    imageSaver = imageModel.ImageSaver("data/adv1")
-    imageSaver.saveImage(imgOld, "imgOld")
-    imageSaver.saveImage(img, "imgNew")
+    label2ans = dataset.label2ans
+    # imageSaverOld = imageModel.ImageSaver("data/adv1Old")
+    imageSaverNew = imageModel.ImageSaver("data/adv2New")
+    numSuccess = 0
+    successList = []
+    iterList = []
+    targetList = []
+    predictedList = []
+    for i, vqaInfo in enumerate(dataset):
+        entry = dataset.entries[i]
+        target = None
+        while target is None or target in entry["answer"]["labels"]:
+            target = np.random.randint(len(label2ans))
+        print ""
+        print "questionId: {}, imgId: {}".format(entry["question_id"], entry["image_id"])
+        print "Answers: {}".format([label2ans[label] for label in entry["answer"]["labels"]])
+        print "Target: {}".format(label2ans[target])
+
+        startTime = time.time()
+        success, imgOld, imgNew, predicted, iters = imageAdvF(model, vqaInfo, entry, target, dataset)
+        print "Num: {0}, Success: {1}, Predicted: {2}, Iters: {3}, Taken: {4:.2f}".format(
+            i,
+            success,
+            label2ans[predicted],
+            iters,
+            time.time() - startTime)
+        
+        if success:
+            numSuccess += 1
+            successList.append(True)
+        else:
+            successList.append(False)
+        iterList.append(iters)
+        targetList.append(target)
+        predictedList.append(int(predicted.numpy()))
+
+        qidStr = str(entry["question_id"])
+        # imageSaverOld.saveImage(imgOld, prefix + imgIdStr + ".jpg")
+        imageSaverNew.saveImage(imgNew, qidStr + ".jpg")
+
+    print ""
+    print "Success: {}".format(numSuccess)
+    print "SuccessList: {}".format(successList)
+    print "IterList: {}".format(iterList)
+    print "TargetList: {}".format(targetList)
+    print "PredictedList: {}".format(predictedList)
+
+    np.savez("data/adv2Out.npz",
+             successList=successList,
+             iterList=iterList,
+             targetList=targetList,
+             predictedList=predictedList)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -124,6 +176,8 @@ if __name__ == '__main__':
     elif args.mode == "evalFromImages":
         evalFromImages(args)
     elif args.mode == "imageAdv1":
-        imageAdv1(args)
+        imageAdv(args, train.imageAdv1)
+    elif args.mode == "imageAdv2":
+        imageAdv(args, train.imageAdv2)
     else:
         print "Mode not supported: {}".format(args.mode)
