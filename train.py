@@ -115,33 +115,34 @@ def imageAdv1(model, dataset):
     print "Target is {}".format(label2ans[target])
     print ""
 
-    imgOld = imgOld.unsqueeze(0)
+    imgOld = imgOld.unsqueeze(0).cuda()
     b = b.unsqueeze(0).cuda()
     q = q.unsqueeze(0).cuda()
     a = a.unsqueeze(0).cuda()
-    img = imgOld.clone()
+    img = imgOld.clone().cuda()
 
     while True:
         startTime = time.time()
 
-        img = img.cuda()
         img.requires_grad = True
         logits = model(img, b, q, a)
 
         predicted = torch.argmax(logits)
         targetScore = logits[0][target]
-        print "predicted: {0}, targetScore: {1:.2f}, time: {2:.2f} ".format(
+        print "predicted: {0}, predictedScore: {1:.2f}, targetScore: {2:.2f}, time: {3:.2f} ".format(
             label2ans[predicted],
+            logits[0][predicted],
             targetScore,
             time.time() - startTime)
         if predicted == target:
             print "Done"
             break
 
+        targetScore -= 0.1 * torch.sum((img - imgOld)**2)
         targetScore.backward()
         with torch.no_grad():
             norm = torch.sqrt(torch.sum(img.grad**2))
             img += img.grad / norm
             img.grad.zero_()
 
-    return imgOld.squeeze(), img.cpu().squeeze()
+    return imgOld.cpu().squeeze(), img.cpu().squeeze()
