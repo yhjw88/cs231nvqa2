@@ -122,7 +122,8 @@ def imageAdv1(model, vqaInfo, entry, target, dataset):
 
     success = False
     iters = 0
-    for i in range(100):
+    momentum = 0
+    for i in range(200):
         img.requires_grad = True
         logits = model(img, b, q, a)
 
@@ -135,7 +136,10 @@ def imageAdv1(model, vqaInfo, entry, target, dataset):
         #     time.time() - startTime)
         if i == 0:
             print "Predicted (Old): {}".format(dataset.label2ans[predicted])
-        if predicted.cpu().squeeze() not in entry["answer"]["labels"]:
+        # if predicted.cpu().squeeze() not in entry["answer"]["labels"]:
+        #     success = True
+        #     break
+        if predicted.cpu().squeeze() == target:
             success = True
             break
 
@@ -143,8 +147,10 @@ def imageAdv1(model, vqaInfo, entry, target, dataset):
         targetScore.backward()
         iters += 1
         with torch.no_grad():
-            norm = torch.sqrt(torch.sum(img.grad**2))
-            img += img.grad / norm
+            norm1 = torch.sum(torch.abs(img.grad))
+            momentum = 0.8 * momentum + img.grad / norm1
+            norm2 = torch.sqrt(torch.sum(momentum**2))
+            img += momentum / norm2
             img.grad.zero_()
 
     return success, imgOld.cpu().squeeze(), img.cpu().squeeze(), predicted.cpu().squeeze(), iters
