@@ -91,7 +91,7 @@ class ImageSaver():
 
     def saveImage(self, image, filename):
         image = self.transform(image.clone())
-        image.save(os.path.join(self.folder, filename), "jpeg")
+        image.save(os.path.join(self.folder, filename))
 
 def getCombinedModel(args, dataset):
     constructor = 'build_%s' % args.model

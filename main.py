@@ -112,7 +112,7 @@ def imageAdv(args, imageAdvF):
     # Train and save.
     label2ans = dataset.label2ans
     # imageSaverOld = imageModel.ImageSaver("data/adv1Old")
-    imageSaverNew = imageModel.ImageSaver("data/adv5New", True)
+    imageSaverNew = imageModel.ImageSaver("data/adv6New", True)
     numSuccess = 0
     successList = []
     iterList = []
@@ -151,7 +151,7 @@ def imageAdv(args, imageAdvF):
 
         qidStr = str(entry["question_id"])
         # imageSaverOld.saveImage(imgOld, prefix + imgIdStr + ".jpg")
-        imageSaverNew.saveImage(imgNew, qidStr + ".jpg")
+        imageSaverNew.saveImage(imgNew, qidStr + ".png")
 
     print ""
     print "Success: {}".format(numSuccess)
@@ -160,7 +160,7 @@ def imageAdv(args, imageAdvF):
     print "TargetList: {}".format(targetList)
     print "PredictedList: {}".format(predictedList)
 
-    np.savez("data/adv5Out.npz",
+    np.savez("data/adv6Out.npz",
              successList=successList,
              iterList=iterList,
              targetList=targetList,
