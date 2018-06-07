@@ -67,11 +67,11 @@ class ImageLoader():
         return transform
 
 class ImageSaver():
-    def __init__(self, folder):
+    def __init__(self, folder, shouldRescale=False):
         self.folder = folder
-        self.transform = self.getTransform()
+        self.transform = self.getTransform(shouldRescale)
 
-    def getTransform(self, shouldRescale=False):
+    def getTransform(self, shouldRescale):
         transform = transforms.Compose([
             transforms.Normalize(mean=[0, 0, 0],
                                  std=(1 / np.array([0.229, 0.224, 0.225]))),

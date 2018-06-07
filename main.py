@@ -94,6 +94,7 @@ def evalFromImages(args):
 def imageAdv(args, imageAdvF):
     # Fetch data.
     questionIds = cPickle.load(open("data/goodQuestions.pkl", "rb"))
+    targetDict = cPickle.load(open("data/q2t.pkl", "rb"))
     dictionary = Dictionary.load_from_file('data/dictionary.pkl')
     print "Fetching eval data"
     imageLoader = imageModel.ImageLoader("data/val2014img", "val")
@@ -111,7 +112,7 @@ def imageAdv(args, imageAdvF):
     # Train and save.
     label2ans = dataset.label2ans
     # imageSaverOld = imageModel.ImageSaver("data/adv1Old")
-    imageSaverNew = imageModel.ImageSaver("data/adv2New")
+    imageSaverNew = imageModel.ImageSaver("data/adv5New", True)
     numSuccess = 0
     successList = []
     iterList = []
@@ -119,9 +120,12 @@ def imageAdv(args, imageAdvF):
     predictedList = []
     for i, vqaInfo in enumerate(dataset):
         entry = dataset.entries[i]
+        if entry["question_id"] not in targetDict:
+            continue
+        targets = targetDict[entry["question_id"]]
         target = None
         while target is None or target in entry["answer"]["labels"]:
-            target = np.random.randint(len(label2ans))
+            target = targets[np.random.randint(len(targets))]
         print ""
         print "questionId: {}, imgId: {}".format(entry["question_id"], entry["image_id"])
         print "Answers: {}".format([label2ans[label] for label in entry["answer"]["labels"]])
@@ -156,7 +160,7 @@ def imageAdv(args, imageAdvF):
     print "TargetList: {}".format(targetList)
     print "PredictedList: {}".format(predictedList)
 
-    np.savez("data/adv2Out.npz",
+    np.savez("data/adv5Out.npz",
              successList=successList,
              iterList=iterList,
              targetList=targetList,
