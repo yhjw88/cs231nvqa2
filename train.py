@@ -107,52 +107,94 @@ def generate_examples(model, adv_dset):
         pred = model(v.cuda(), b.cuda(), q.cuda(), None)
         print(pred)
 
-# Currently works on only one image.
-def imageAdv1(model, dataset):
+# "targeted" "Untargeted"
+def imageAdv1(model, vqaInfo, entry, target, dataset):
     model.train(False)
     for param in model.parameters():
         param.requires_grad = False
 
-    imgOld, b, q, a = dataset[0]
-
-    print ""
-    print "Printing good answers"
-    label2ans = dataset.label2ans
-    for i, score in enumerate(a):
-        if score > 0:
-            print "{}: {}".format(label2ans[i], score)
-    target = 1661 #TODO: Pick target?
-    print "Target is {}".format(label2ans[target])
-    print ""
-
+    imgOld, b, q, a = vqaInfo
     imgOld = imgOld.unsqueeze(0).cuda()
     b = b.unsqueeze(0).cuda()
     q = q.unsqueeze(0).cuda()
     a = a.unsqueeze(0).cuda()
     img = imgOld.clone().cuda()
 
-    while True:
-        startTime = time.time()
-
+    success = False
+    iters = 0
+    momentum = 0
+    for i in range(100):
         img.requires_grad = True
         logits = model(img, b, q, a)
 
         predicted = torch.argmax(logits)
         targetScore = logits[0][target]
-        print "predicted: {0}, predictedScore: {1:.2f}, targetScore: {2:.2f}, time: {3:.2f} ".format(
-            label2ans[predicted],
-            logits[0][predicted],
-            targetScore,
-            time.time() - startTime)
-        if predicted == target:
-            print "Done"
+        # print "predicted: {0}, predictedScore: {1:.2f}, targetScore: {2:.2f}, time: {3:.2f} ".format(
+        #     label2ans[predicted],
+        #     logits[0][predicted],
+        #     targetScore,
+        #     time.time() - startTime)
+        if i == 0:
+            print "Predicted (Old): {}".format(dataset.label2ans[predicted])
+        # if predicted.cpu().squeeze() not in entry["answer"]["labels"]:
+        #     success = True
+        #     break
+        if predicted.cpu().squeeze() == target:
+            success = True
             break
 
-        targetScore -= 0.1 * torch.sum((img - imgOld)**2)
         targetScore.backward()
+        iters += 1
         with torch.no_grad():
             norm = torch.sqrt(torch.sum(img.grad**2))
             img += img.grad / norm
             img.grad.zero_()
+            # norm1 = torch.sum(torch.abs(img.grad))
+            # momentum = 0.8 * momentum + img.grad / norm1
+            # norm2 = torch.sqrt(torch.sum(momentum**2))
+            # img += momentum / norm2
+            # img.grad.zero_()
 
-    return imgOld.cpu().squeeze(), img.cpu().squeeze()
+    return success, imgOld.cpu().squeeze(), img.cpu().squeeze(), predicted.cpu().squeeze(), iters
+
+
+# "Untargeted" "Untargeted"
+def imageAdv2(model, vqaInfo, entry, target, dataset):
+    model.train(False)
+    for param in model.parameters():
+        param.requires_grad = False
+
+    imgOld, b, q, a = vqaInfo
+    b = b.unsqueeze(0).cuda()
+    q = q.unsqueeze(0).cuda()
+    a = a.unsqueeze(0).cuda()
+    img = imgOld.clone().unsqueeze(0).cuda()
+
+    success = False
+    iters = 0
+    for i in range(100):
+        img.requires_grad = True
+        logits = model(img, b, q, a)
+
+        predicted = torch.argmax(logits)
+        # targetScore = logits[0][target]
+        # print "predicted: {0}, predictedScore: {1:.2f}, targetScore: {2:.2f}, time: {3:.2f} ".format(
+        #     label2ans[predicted],
+        #     logits[0][predicted],
+        #     targetScore,
+        #     time.time() - startTime)
+        if i == 0:
+            print "Predicted (Old): {}".format(dataset.label2ans[predicted])
+        if predicted.cpu().squeeze() not in entry["answer"]["labels"]:
+            success = True
+            break
+
+        logits[0][predicted].backward()
+        iters += 1
+        with torch.no_grad():
+            norm = torch.sqrt(torch.sum(img.grad**2))
+            img -= img.grad / norm
+            img.grad.zero_()
+
+    return success, imgOld, img.cpu().squeeze(), predicted.cpu().squeeze(), iters
+
